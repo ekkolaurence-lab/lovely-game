@@ -1,0 +1,762 @@
+!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lovely - Couple Game (Spicy & LDR Edition)</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Google Fonts: Inter & Playfair Display -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,800;1,600&display=swap" rel="stylesheet">
+  
+  <!-- Canvas Confetti Library -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brandBg: '#fcf8f2',
+            cardBg: '#ffffff',
+            primaryRed: '#be3459',
+            primaryBlue: '#2b6cb0',
+            spicyPurple: '#7c3aed',
+            spicyFlame: '#e11d48',
+            warmGold: '#d97706',
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            serif: ['Playfair Display', 'serif'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      background-color: #fcf8f2;
+      font-family: 'Inter', sans-serif;
+      user-select: none;
+    }
+    .serif-title {
+      font-family: 'Playfair Display', serif;
+    }
+    .custom-shadow {
+      box-shadow: 0 15px 35px -5px rgba(0, 0, 0, 0.05), 0 8px 15px -6px rgba(0, 0, 0, 0.03);
+    }
+    .active-tab {
+      background-color: #1f2937 !important;
+      color: #ffffff !important;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    /* Pulse glow for heat levels */
+    @keyframes pulse-flame {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.85; transform: scale(1.05); }
+    }
+    .flame-glow {
+      animation: pulse-flame 2s infinite ease-in-out;
+    }
+  </style>
+</head>
+<body class="min-h-screen text-slate-800 flex flex-col justify-between items-center p-3 sm:p-6 antialiased">
+
+  <header class="w-full max-w-4xl flex flex-col md:flex-row justify-between items-center gap-4 mb-4 sm:mb-6">
+    <div class="flex items-center gap-3">
+      <div class="bg-red-500 text-white w-10 h-10 rounded-2xl flex items-center justify-center text-xl shadow-md shadow-red-200">
+        <i class="fa-solid font-bold fa-heart"></i>
+      </div>
+      <div>
+        <h1 class="text-2xl font-extrabold tracking-tight text-slate-900 flex items-center gap-2">
+          Lovely <span class="text-xs bg-red-100 text-red-600 font-semibold px-2.5 py-0.5 rounded-full border border-red-200">LDR Edition</span>
+        </h1>
+        <p class="text-xs text-slate-500 font-medium">Real-time Long Distance Couple Game</p>
+      </div>
+    </div>
+
+    <!-- Room Status & Connection Header -->
+    <div id="roomStatusBar" class="hidden flex items-center gap-2 sm:gap-3 bg-white px-4 py-2 rounded-2xl border border-slate-200 shadow-sm text-sm">
+      <div id="connectionDot" class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse"></div>
+      <span id="connectionText" class="text-xs font-semibold text-slate-600">Waiting for Partner...</span>
+      <div class="h-4 w-px bg-slate-200 mx-1"></div>
+      <button onclick="copyRoomCode()" class="flex items-center gap-1.5 font-bold text-slate-800 hover:text-red-600 transition bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded-xl text-xs">
+        <span>Room: <span id="displayRoomCode" class="tracking-widest text-red-600">----</span></span>
+        <i class="fa-regular fa-copy text-slate-400 text-xs"></i>
+      </button>
+      <button onclick="leaveRoom()" class="text-xs text-slate-400 hover:text-red-500 ml-1" title="Leave Room">
+        <i class="fa-solid fa-right-from-bracket"></i>
+      </button>
+    </div>
+  </header>
+
+  <main class="w-full max-w-3xl flex-1 flex flex-col justify-center items-center">
+
+    <!-- LOBBY SCREEN (Create / Join Room) -->
+    <div id="lobbyScreen" class="w-full bg-white rounded-3xl p-6 sm:p-10 custom-shadow border border-slate-100 text-center my-auto transition-all">
+      <div class="max-w-md mx-auto">
+        <div class="w-16 h-16 bg-red-50 rounded-3xl flex items-center justify-center mx-auto mb-4 text-red-500 text-2xl">
+          <i class="fa-solid fa-comments text-red-500"></i>
+        </div>
+        <h2 class="serif-title text-3xl font-bold text-slate-900 mb-2">Connect Across Miles</h2>
+        <p class="text-slate-500 text-sm mb-8 leading-relaxed">
+          Play live together! Reveal secrets, answer side-by-side challenges, and do playful remote dares in real-time.
+        </p>
+
+        <!-- Player Nickname Input -->
+        <div class="mb-6 text-left">
+          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Your Name / Nickname</label>
+          <input type="text" id="playerNameInput" placeholder="e.g. Alex" class="w-full px-4 py-3 rounded-2xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-400 font-semibold text-slate-800 transition">
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+          <button onclick="createRoom()" class="w-full py-3.5 px-4 bg-red-600 hover:bg-red-700 active:scale-95 text-white font-bold rounded-2xl shadow-lg shadow-red-200 transition flex items-center justify-center gap-2">
+            <i class="fa-solid fa-plus-circle"></i> Create New Room
+          </button>
+          
+          <div class="flex gap-2">
+            <input type="text" id="joinCodeInput" placeholder="4-Letter Code" maxlength="4" class="w-full px-3 py-3 rounded-2xl bg-slate-50 border border-slate-200 text-center font-extrabold uppercase tracking-widest focus:outline-none focus:ring-2 focus:ring-slate-400">
+            <button onclick="joinRoom()" class="py-3.5 px-4 bg-slate-800 hover:bg-slate-900 active:scale-95 text-white font-bold rounded-2xl transition">
+              Join
+            </button>
+          </div>
+        </div>
+        
+        <p id="lobbyError" class="text-xs text-red-500 font-semibold h-4"></p>
+      </div>
+    </div>
+
+    <!-- GAME BOARD SCREEN -->
+    <div id="gameScreen" class="hidden w-full flex flex-col items-center gap-4 sm:gap-6">
+      
+      <!-- MODE NAVIGATION BAR -->
+      <nav class="w-full flex items-center justify-center gap-1.5 sm:gap-2 overflow-x-auto pb-2 scrollbar-none">
+        <button onclick="switchMode('thisThat')" id="nav-thisThat" class="mode-tab-btn px-3.5 py-2 rounded-2xl text-xs sm:text-sm font-bold bg-white text-slate-600 border border-slate-200 whitespace-nowrap transition">
+          <i class="fa-solid fa-arrows-left-right text-pink-500 mr-1"></i> This/That
+        </button>
+        <button onclick="switchMode('wouldRather')" id="nav-wouldRather" class="mode-tab-btn px-3.5 py-2 rounded-2xl text-xs sm:text-sm font-bold bg-white text-slate-600 border border-slate-200 whitespace-nowrap transition">
+          <i class="fa-solid fa-scale-balanced text-blue-500 mr-1"></i> Would You Rather
+        </button>
+        <button onclick="switchMode('truthDare')" id="nav-truthDare" class="mode-tab-btn px-3.5 py-2 rounded-2xl text-xs sm:text-sm font-bold bg-white text-slate-600 border border-slate-200 whitespace-nowrap transition">
+          <i class="fa-solid fa-masks-theater text-emerald-500 mr-1"></i> Truth/Dare
+        </button>
+        <button onclick="switchMode('spicy')" id="nav-spicy" class="mode-tab-btn px-3.5 py-2 rounded-2xl text-xs sm:text-sm font-bold bg-white text-slate-600 border border-slate-200 whitespace-nowrap transition">
+          <i class="fa-solid fa-fire text-red-500 mr-1"></i> 🔥 Secret Vault
+        </button>
+      </nav>
+
+      <!-- HEAT METER FILTER (Only active in Spicy Mode or optionally active) -->
+      <div id="heatMeterContainer" class="flex items-center gap-2 bg-white/80 backdrop-blur px-4 py-1.5 rounded-full border border-slate-200 text-xs font-semibold text-slate-600 shadow-sm">
+        <span class="text-slate-400 font-bold uppercase text-[10px] tracking-wider">Heat Level:</span>
+        <button onclick="setHeatLevel('mild')" id="heat-mild" class="heat-btn px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 font-bold hover:bg-emerald-100 hover:text-emerald-700 transition">🌱 Mild</button>
+        <button onclick="setHeatLevel('warm')" id="heat-warm" class="heat-btn px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 font-bold hover:bg-amber-100 hover:text-amber-700 transition">🌶️ Warm</button>
+        <button onclick="setHeatLevel('spicy')" id="heat-spicy" class="heat-btn px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 font-bold hover:bg-red-100 hover:text-red-700 transition">🔥 Spicy</button>
+        <button onclick="setHeatLevel('extra')" id="heat-extra" class="heat-btn px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 font-bold hover:bg-purple-100 hover:text-purple-700 transition">💥 Extra</button>
+      </div>
+
+      <!-- MAIN PLAYING CARD CONTAINER -->
+      <div class="w-full bg-white rounded-3xl p-6 sm:p-10 custom-shadow border border-slate-100 text-center transition-all relative overflow-hidden">
+        
+        <!-- Turn Indicator Banner -->
+        <div class="flex items-center justify-between text-xs font-bold text-slate-400 mb-4 border-b border-slate-100 pb-3">
+          <span id="turnLabel" class="flex items-center gap-1.5 text-slate-600">
+            <i class="fa-regular fa-user"></i> Turn: Synchronized
+          </span>
+          <span id="cardCounter" class="bg-slate-100 px-2.5 py-1 rounded-full text-slate-500 font-semibold">Card 1 / 10</span>
+        </div>
+
+        <!-- Question Header Title -->
+        <h2 id="cardTitle" class="serif-title text-2xl sm:text-3xl font-extrabold text-slate-900 mb-6 leading-snug min-h-[60px] flex items-center justify-center">
+          Loading prompt...
+        </h2>
+
+        <!-- DYNAMIC CHOICE CONTAINER (THIS OR THAT / WOULD YOU RATHER) -->
+        <div id="binaryChoiceContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4 relative mb-6">
+          
+          <!-- Choice A -->
+          <button id="choiceBtnA" onclick="makeChoice('A')" class="group relative h-36 sm:h-44 rounded-2xl bg-gradient-to-br from-pink-600 to-red-600 hover:from-pink-700 hover:to-red-700 text-white p-5 flex flex-col justify-center items-center shadow-md active:scale-98 transition text-center overflow-hidden">
+            <span id="textOptionA" class="text-xl sm:text-2xl font-bold leading-tight z-10">Option A</span>
+            <div id="badgeUserA" class="mt-2 text-xs bg-white/20 px-3 py-1 rounded-full font-bold backdrop-blur hidden z-10">You picked this</div>
+            <div id="badgePartnerA" class="mt-1 text-xs bg-yellow-400 text-slate-900 px-3 py-1 rounded-full font-extrabold shadow hidden z-10">Partner picked this!</div>
+          </button>
+
+          <!-- Divider Circle -->
+          <div class="hidden md:flex absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white text-slate-800 font-extrabold w-10 h-10 rounded-full border border-slate-200 items-center justify-center shadow-lg z-20 text-xs tracking-tighter">
+            VS
+          </div>
+
+          <!-- Choice B -->
+          <button id="choiceBtnB" onclick="makeChoice('B')" class="group relative h-36 sm:h-44 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white p-5 flex flex-col justify-center items-center shadow-md active:scale-98 transition text-center overflow-hidden">
+            <span id="textOptionB" class="text-xl sm:text-2xl font-bold leading-tight z-10">Option B</span>
+            <div id="badgeUserB" class="mt-2 text-xs bg-white/20 px-3 py-1 rounded-full font-bold backdrop-blur hidden z-10">You picked this</div>
+            <div id="badgePartnerB" class="mt-1 text-xs bg-yellow-400 text-slate-900 px-3 py-1 rounded-full font-extrabold shadow hidden z-10">Partner picked this!</div>
+          </button>
+        </div>
+
+        <!-- TRUTH OR DARE / SPICY SECRET CONTAINER -->
+        <div id="singlePromptContainer" class="hidden flex-col items-center gap-4 mb-6">
+          <div id="actionBadge" class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-extrabold uppercase tracking-wider bg-red-100 text-red-700 border border-red-200">
+            <i class="fa-solid fa-lock"></i> Locked Secret
+          </div>
+
+          <p id="promptSubtitle" class="text-sm text-slate-500 font-medium max-w-lg">
+            Tap below to answer live on video call, or click Reveal to reveal to your partner!
+          </p>
+
+          <div class="flex flex-wrap gap-3 justify-center w-full max-w-md mt-2">
+            <button id="revealSecretBtn" onclick="toggleRevealSecret()" class="flex-1 py-3.5 px-6 bg-purple-600 hover:bg-purple-700 active:scale-95 text-white font-extrabold rounded-2xl shadow-lg shadow-purple-200 transition flex items-center justify-center gap-2">
+              <i class="fa-solid fa-key"></i> <span id="revealBtnText">Reveal Answer</span>
+            </button>
+            <button id="passPenaltyBtn" onclick="triggerPenaltyModal()" class="py-3.5 px-5 bg-amber-500 hover:bg-amber-600 active:scale-95 text-white font-bold rounded-2xl shadow-md transition flex items-center justify-center gap-2">
+              <i class="fa-solid fa-skull"></i> Pass & Face Penalty
+            </button>
+          </div>
+
+          <!-- Revealed Secret Box -->
+          <div id="revealedSecretBox" class="hidden w-full bg-purple-50 border-2 border-purple-200 rounded-2xl p-5 text-left transition-all">
+            <div class="flex items-center gap-2 text-purple-800 font-bold text-xs uppercase tracking-wider mb-2">
+              <i class="fa-solid fa-unlock"></i> Revealed Live Status
+            </div>
+            <p id="revealedSecretText" class="text-slate-800 font-semibold text-base leading-relaxed">
+              Secret is revealed! Discuss together on your call or text now! 💋
+            </p>
+          </div>
+        </div>
+
+        <!-- SPICY PENALTY BOX -->
+        <div id="penaltyCard" class="bg-red-50 border border-red-200 rounded-2xl p-4 text-left flex items-start gap-3 mt-4">
+          <div class="text-red-500 text-xl pt-0.5"><i class="fa-solid fa-pepper-hot"></i></div>
+          <div class="flex-1">
+            <h4 class="text-xs font-bold text-red-800 uppercase tracking-wider mb-0.5">Spicy Penalty (If Refused / Passed):</h4>
+            <p id="penaltyDescriptionText" class="text-xs sm:text-sm text-red-900 font-medium">
+              Send a 15-second whisper voice note detailing what you'd do if you were in the same room right now.
+            </p>
+          </div>
+        </div>
+
+        <!-- CARD NAVIGATION CONTROLS -->
+        <div class="mt-8 pt-6 border-t border-slate-100 flex items-center justify-between gap-4">
+          <button onclick="addCustomSecretPrompt()" class="text-xs font-bold text-slate-500 hover:text-red-600 flex items-center gap-1.5 transition">
+            <i class="fa-solid fa-plus-circle text-sm"></i> Add Custom Secret
+          </button>
+
+          <button onclick="nextCard()" class="px-6 py-3 bg-slate-900 hover:bg-slate-800 active:scale-95 text-white font-bold rounded-2xl shadow-md transition flex items-center gap-2">
+            <span>Next Card</span> <i class="fa-solid fa-arrow-right text-xs"></i>
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+  <!-- ADD CUSTOM QUESTION MODAL -->
+  <div id="customModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 custom-shadow border border-slate-100 relative animate-in fade-in zoom-in duration-200">
+      <button onclick="closeCustomModal()" class="absolute top-5 right-5 text-slate-400 hover:text-slate-600">
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
+
+      <div class="w-12 h-12 bg-purple-100 text-purple-600 rounded-2xl flex items-center justify-center text-xl mb-4">
+        <i class="fa-solid fa-wand-magic-sparkles"></i>
+      </div>
+      
+      <h3 class="serif-title text-2xl font-bold text-slate-900 mb-1">Add Secret Question</h3>
+      <p class="text-xs text-slate-500 mb-6">This prompt will instantly sync into your active session!</p>
+
+      <div class="space-y-4 text-left mb-6">
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Your Prompt / Question</label>
+          <input type="text" id="customPromptInput" placeholder="e.g., What was your first physical impression of me?" class="w-full px-4 py-3 rounded-2xl bg-slate-50 border border-slate-200 font-medium text-sm focus:outline-none focus:ring-2 focus:ring-purple-400">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Spicy Penalty (If partner passes)</label>
+          <input type="text" id="customPenaltyInput" placeholder="e.g., Send a 10s voice note saying 'I love you'" class="w-full px-4 py-3 rounded-2xl bg-slate-50 border border-slate-200 font-medium text-sm focus:outline-none focus:ring-2 focus:ring-purple-400">
+        </div>
+      </div>
+
+      <div class="flex gap-3">
+        <button onclick="closeCustomModal()" class="flex-1 py-3 bg-slate-100 font-bold text-slate-600 rounded-2xl text-sm">Cancel</button>
+        <button onclick="submitCustomPrompt()" class="flex-1 py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-2xl text-sm shadow-md shadow-purple-200">Add to Game</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PENALTY DISPLAY MODAL -->
+  <div id="penaltyModal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 custom-shadow border border-slate-100 text-center relative animate-in fade-in zoom-in duration-200">
+      <div class="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center text-3xl mx-auto mb-4 flame-glow">
+        <i class="fa-solid fa-fire"></i>
+      </div>
+      
+      <h3 class="serif-title text-2xl font-bold text-slate-900 mb-2">Spicy Penalty Triggered!</h3>
+      <p class="text-xs text-slate-500 mb-6">You refused or passed on the secret card. Time to fulfill your penalty now live!</p>
+
+      <div class="bg-red-50 border border-red-200 rounded-2xl p-5 mb-6 text-red-950 font-semibold text-base leading-relaxed">
+        "<span id="modalPenaltyText">Send a 10s voice note detailing your favorite memory of us.</span>"
+      </div>
+
+      <button onclick="closePenaltyModal()" class="w-full py-3.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-2xl text-sm shadow-lg shadow-red-200">
+        I Fulfilling Penalty Now 🔥
+      </button>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="mt-8 text-center text-xs text-slate-400 font-medium">
+    Lovely Couple Game • Long Distance Relationship Edition
+  </footer>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    // App ID & Firebase Config
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'lovely-couple-app';
+    const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
+      apiKey: "demo-key",
+      authDomain: "demo.firebaseapp.com",
+      projectId: "demo-project",
+      storageBucket: "demo.appspot.com",
+      messagingSenderId: "123456789",
+      appId: "1:123456789:web:abcdef"
+    };
+
+    // Firebase App Initialization
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // Global Session State
+    window.currentUser = null;
+    window.roomCode = null;
+    window.roomRef = null;
+    window.unsubscribeRoom = null;
+    window.isHost = false;
+
+    // Curated Content Decks
+    const GAME_DECKS = {
+      thisThat: {
+        mild: [
+          { title: "Pineapple absolutely belongs on pizza", a: "Agree 🍍", b: "Disagree 🍕", penalty: "Send a silly face selfie!" },
+          { title: "When we talk late night:", a: "Phone Call 📞", b: "Texting All Night 💬", penalty: "Voice whisper 'I miss you' 3 times." },
+          { title: "Ideal Vacation Destination", a: "Cozy Mountain Cabin 🏔️", b: "Sunny Tropical Beach 🏖️", penalty: "Do 5 pushups on video camera!" }
+        ],
+        warm: [
+          { title: "When we reunite next at the airport / station:", a: "Huge Warm Tight Hug 🫂", b: "Long Deep Passionate Kiss 💋", penalty: "Send a 10s voice note of your heart beating." },
+          { title: "Sleeping together long distance:", a: "Sleep on FaceTime Call 😴", b: "Goodnight Text & Sleep 🌙", penalty: "Describe your favorite physical feature of mine." },
+          { title: "When making up after a disagreement:", a: "Talk It Out Right Away 🗣️", b: "Give Space then Comfort 🤗", penalty: "Blow 5 cute kisses into the camera." }
+        ],
+        spicy: [
+          { title: "Best vibe for a private video date:", a: "Dim Mood Lighting 🕯️", b: "Completely Dark & Secret 🌃", penalty: "Whisper your spicy fantasy into a voice recording." },
+          { title: "When we cuddle in bed:", a: "I want to be Little Spoon 🥄", b: "I want to be Big Spoon 🛋️", penalty: "Show your favorite outfit on webcam." },
+          { title: "Which teasing style gets you more?", a: "Spicy Texting During Work 📱", b: "Playful Voice Notes at Night 🎙️", penalty: "Send a photo of what you're wearing right now." }
+        ],
+        extra: [
+          { title: "Spicy LDR Preference:", a: "Late Night Spicy Video Call 🔥", b: "Descriptive Romantic Love Letters 💌", penalty: "Tell partner the exact moment you felt attracted to them." },
+          { title: "If we had 24 hours alone in a hotel room:", a: "Order Room Service & Never Leave Bed 🛏️", b: "Explore the City then All Night Passion 🌆", penalty: "Let partner dictate your next dare!" }
+        ]
+      },
+
+      wouldRather: {
+        mild: [
+          { title: "Would you rather...", a: "Only communicate via emojis for a day", b: "Only communicate via voice notes for a day", penalty: "Send a voice note singing our favorite song!" },
+          { title: "Would you rather...", a: "Accidentally send a love text to your boss", b: "Accidentally send it to your parents", penalty: "Tell a funny embarrassing childhood story!" }
+        ],
+        warm: [
+          { title: "Would you rather...", a: "Have a 3-hour video date every night", b: "Have one full uninterrupted weekend date per month", penalty: "Blow a passionate kiss to the webcam." },
+          { title: "Would you rather...", a: "Steal my comfy hoodie forever", b: "Steal my favorite pillow", penalty: "Send a cute morning selfie right now." }
+        ],
+        spicy: [
+          { title: "Would you rather...", a: "Receive a surprise spicy photo right now", b: "Receive an intimate 30-second audio whisper", penalty: "Unbutton your top button or wear a spicy smile!" },
+          { title: "Would you rather...", a: "Be kissed passionately in public", b: "Be whispered spicy secrets in a crowded room", penalty: "Tell partner your favorite outfit they wear." }
+        ],
+        extra: [
+          { title: "Would you rather...", a: "Plan a secret weekend getaway right now", b: "Receive a locked spicy secret folder on your phone", penalty: "Fulfill a live remote video dare!" }
+        ]
+      },
+
+      truthDare: {
+        mild: [
+          { title: "Truth: What was the exact moment you fell in love with me?", a: "Answer Truth 😇", b: "Do Dare 😈", penalty: "Dare: Send a 10s voice note making a funny animal sound!" },
+          { title: "Truth: What is one habit of mine you secretly find adorable?", a: "Answer Truth 😇", b: "Do Dare 😈", penalty: "Dare: Post 'I love my partner' on your story or text a friend!" }
+        ],
+        warm: [
+          { title: "Truth: What is your favorite physical memory of us together?", a: "Answer Truth 😇", b: "Do Dare 😈", penalty: "Dare: Wink and kiss the camera lens." },
+          { title: "Truth: What song always reminds you of me?", a: "Answer Truth 😇", b: "Do Dare 😈", penalty: "Dare: Play 15 seconds of that song and dance on video call." }
+        ],
+        spicy: [
+          { title: "Truth: What is a spicy thought you had about me today?", a: "Reveal Secret 🙈", b: "Do Penalty 🔥", penalty: "Penalty: Whisper your spicy thought into the mic!" },
+          { title: "Truth: Which part of my body do you wish you could touch right now?", a: "Reveal Secret 🙈", b: "Do Penalty 🔥", penalty: "Penalty: Send a spicy voice note detailing it." }
+        ],
+        extra: [
+          { title: "Truth: What is your wildest fantasy involving the two of us?", a: "Reveal Secret 🙈", b: "Do Penalty 🔥", penalty: "Penalty: Complete a remote live video dare dictated by partner!" }
+        ]
+      },
+
+      spicy: {
+        mild: [
+          { title: "🔥 Secret: What is the most romantic thing I've ever done for you?", a: "Reveal Secret 💖", penalty: "Penalty: Send a cute voice note saying 3 things you love about me." }
+        ],
+        warm: [
+          { title: "🔥 Secret: What outfit of mine makes your heart beat fastest?", a: "Reveal Secret 👗", penalty: "Penalty: Send a photo of your current outfit!" }
+        ],
+        spicy: [
+          { title: "🔥 Secret: What were you thinking about the last time you missed me intensely?", a: "Reveal Secret 💋", penalty: "Penalty: Send a 15s audio whisper!" },
+          { title: "🔥 Secret: What is your favorite place to be kissed?", a: "Reveal Secret 🙈", penalty: "Penalty: Touch that spot on camera and wink!" }
+        ],
+        extra: [
+          { title: "🔥 Secret: Describe your ultimate dream date when we are finally together in person.", a: "Reveal Secret 💥", penalty: "Penalty: Let partner choose your nickname for the rest of the week!" }
+        ]
+      }
+    };
+
+    // Authentication Guard & Startup
+    async function initAuth() {
+      try {
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+          const res = await signInWithCustomToken(auth, __initial_auth_token);
+          window.currentUser = res.user;
+        } else {
+          const res = await signInAnonymously(auth);
+          window.currentUser = res.user;
+        }
+      } catch (err) {
+        console.error("Auth initialization error:", err);
+      }
+    }
+
+    // Helper for Room Path
+    function getRoomDocRef(code) {
+      return doc(db, 'artifacts', appId, 'public', 'data', 'rooms', code.toUpperCase());
+    }
+
+    window.createRoom = async function() {
+      const nameInput = document.getElementById('playerNameInput').value.trim() || 'Player 1';
+      if (!window.currentUser) await initAuth();
+
+      // Generate 4 letter code
+      const code = Math.random().toString(36).substring(2, 6).toUpperCase();
+      window.roomCode = code;
+      window.isHost = true;
+      window.roomRef = getRoomDocRef(code);
+
+      const initialRoomData = {
+        code: code,
+        createdAt: Date.now(),
+        hostId: window.currentUser.uid,
+        hostName: nameInput,
+        guestId: null,
+        guestName: null,
+        currentMode: 'thisThat',
+        heatLevel: 'mild',
+        cardIndex: 0,
+        choices: {}, // { cardKey: { hostChoice: 'A', guestChoice: 'B' } }
+        revealedSecrets: {},
+        customPrompts: []
+      };
+
+      try {
+        await setDoc(window.roomRef, initialRoomData);
+        listenToRoom();
+        showGameUI();
+      } catch (err) {
+        document.getElementById('lobbyError').innerText = "Failed to create room. Please try again.";
+      }
+    };
+
+    window.joinRoom = async function() {
+      const code = document.getElementById('joinCodeInput').value.trim().toUpperCase();
+      const nameInput = document.getElementById('playerNameInput').value.trim() || 'Player 2';
+      if (!code || code.length !== 4) {
+        document.getElementById('lobbyError').innerText = "Please enter a valid 4-letter room code.";
+        return;
+      }
+
+      if (!window.currentUser) await initAuth();
+
+      window.roomCode = code;
+      window.isHost = false;
+      window.roomRef = getRoomDocRef(code);
+
+      try {
+        const snap = await getDoc(window.roomRef);
+        if (!snap.exists()) {
+          document.getElementById('lobbyError').innerText = "Room not found! Check code.";
+          return;
+        }
+
+        await updateDoc(window.roomRef, {
+          guestId: window.currentUser.uid,
+          guestName: nameInput
+        });
+
+        listenToRoom();
+        showGameUI();
+      } catch (err) {
+        document.getElementById('lobbyError').innerText = "Error joining room.";
+      }
+    };
+
+    function listenToRoom() {
+      if (window.unsubscribeRoom) window.unsubscribeRoom();
+
+      window.unsubscribeRoom = onSnapshot(window.roomRef, (snapshot) => {
+        if (!snapshot.exists()) return;
+        const data = snapshot.data();
+        updateGameFromSync(data);
+      }, (error) => {
+        console.error("Room sync error:", error);
+      });
+    }
+
+    function showGameUI() {
+      document.getElementById('lobbyScreen').classList.add('hidden');
+      document.getElementById('gameScreen').classList.remove('hidden');
+      document.getElementById('roomStatusBar').classList.remove('hidden');
+      document.getElementById('displayRoomCode').innerText = window.roomCode;
+    }
+
+    window.leaveRoom = function() {
+      if (window.unsubscribeRoom) window.unsubscribeRoom();
+      window.roomCode = null;
+      document.getElementById('lobbyScreen').classList.remove('hidden');
+      document.getElementById('gameScreen').classList.add('hidden');
+      document.getElementById('roomStatusBar').classList.add('hidden');
+    };
+
+    window.copyRoomCode = function() {
+      if (!window.roomCode) return;
+      const text = window.roomCode;
+      const input = document.createElement('input');
+      input.value = text;
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand('copy');
+      document.body.removeChild(input);
+
+      confetti({ particleCount: 30, spread: 60, origin: { y: 0.2 } });
+      alert(`Room Code ${text} copied! Send it to your partner! 💕`);
+    };
+
+    function updateGameFromSync(data) {
+      // Connection Status Indicator
+      const hasGuest = !!data.guestId;
+      const connDot = document.getElementById('connectionDot');
+      const connText = document.getElementById('connectionText');
+
+      if (hasGuest) {
+        connDot.className = "w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse";
+        const partnerName = window.isHost ? (data.guestName || 'Partner') : (data.hostName || 'Partner');
+        connText.innerText = `Connected with ${partnerName} ❤️`;
+      } else {
+        connDot.className = "w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse";
+        connText.innerText = "Waiting for Partner...";
+      }
+
+      // Sync Navigation & Heat Level Active States
+      updateNavigationTabs(data.currentMode);
+      updateHeatMeterButtons(data.heatLevel);
+
+      // Active Card Content Computation
+      const currentMode = data.currentMode || 'thisThat';
+      const heatLevel = data.heatLevel || 'mild';
+      const cardIndex = data.cardIndex || 0;
+
+      // Combine curated deck with custom prompts if any
+      let currentDeck = (GAME_DECKS[currentMode] && GAME_DECKS[currentMode][heatLevel]) 
+        ? [...GAME_DECKS[currentMode][heatLevel]] 
+        : [];
+
+      if (data.customPrompts && data.customPrompts.length > 0) {
+        currentDeck = [...data.customPrompts, ...currentDeck];
+      }
+
+      const activeCard = currentDeck[cardIndex % currentDeck.length] || {
+        title: "No cards available for this heat level!",
+        a: "Option A",
+        b: "Option B",
+        penalty: "Do a cute dance on video call!"
+      };
+
+      // Card Counter text
+      document.getElementById('cardCounter').innerText = `Card ${(cardIndex % currentDeck.length) + 1} / ${currentDeck.length}`;
+
+      // Update Card Header Title
+      document.getElementById('cardTitle').innerText = activeCard.title;
+      document.getElementById('penaltyDescriptionText').innerText = activeCard.penalty || "Do a 10-second remote dare!";
+
+      // Toggle UI Layouts based on Mode
+      const binaryBox = document.getElementById('binaryChoiceContainer');
+      const singleBox = document.getElementById('singlePromptContainer');
+
+      const cardKey = `${currentMode}_${heatLevel}_${cardIndex}`;
+      const choices = data.choices ? data.choices[cardKey] : null;
+
+      if (currentMode === 'thisThat' || currentMode === 'wouldRather') {
+        binaryBox.classList.remove('hidden');
+        singleBox.classList.add('hidden');
+
+        document.getElementById('textOptionA').innerText = activeCard.a || "Option A";
+        document.getElementById('textOptionB').innerText = activeCard.b || "Option B";
+
+        // Badges for choices
+        const myRole = window.isHost ? 'host' : 'guest';
+        const partnerRole = window.isHost ? 'guest' : 'host';
+
+        const myChoice = choices ? choices[myRole] : null;
+        const partnerChoice = choices ? choices[partnerRole] : null;
+
+        document.getElementById('badgeUserA').classList.toggle('hidden', myChoice !== 'A');
+        document.getElementById('badgeUserB').classList.toggle('hidden', myChoice !== 'B');
+
+        document.getElementById('badgePartnerA').classList.toggle('hidden', partnerChoice !== 'A');
+        document.getElementById('badgePartnerB').classList.toggle('hidden', partnerChoice !== 'B');
+
+        // Confetti trigger when both pick
+        if (myChoice && partnerChoice && !window[`confetti_${cardKey}`]) {
+          window[`confetti_${cardKey}`] = true;
+          confetti({ particleCount: 50, spread: 70, origin: { y: 0.6 } });
+        }
+
+      } else {
+        // Truth/Dare or Spicy Secret Vault Mode
+        binaryBox.classList.add('hidden');
+        singleBox.classList.remove('hidden');
+
+        const isSecretRevealed = data.revealedSecrets && data.revealedSecrets[cardKey];
+        const secretBox = document.getElementById('revealedSecretBox');
+        const revealBtnText = document.getElementById('revealBtnText');
+
+        if (isSecretRevealed) {
+          secretBox.classList.remove('hidden');
+          revealBtnText.innerText = "Secret Unlocked!";
+          document.getElementById('revealedSecretText').innerText = `🔓 Unlocked by ${isSecretRevealed.byName}! Answer & discuss live now! 🔥`;
+        } else {
+          secretBox.classList.add('hidden');
+          revealBtnText.innerText = "Reveal Answer";
+        }
+      }
+    }
+
+    window.switchMode = async function(mode) {
+      if (!window.roomRef) return;
+      await updateDoc(window.roomRef, { currentMode: mode, cardIndex: 0 });
+    };
+
+    window.setHeatLevel = async function(level) {
+      if (!window.roomRef) return;
+      await updateDoc(window.roomRef, { heatLevel: level, cardIndex: 0 });
+    };
+
+    window.makeChoice = async function(option) {
+      if (!window.roomRef) return;
+      const snap = await getDoc(window.roomRef);
+      if (!snap.exists()) return;
+      const data = snap.data();
+
+      const cardKey = `${data.currentMode}_${data.heatLevel}_${data.cardIndex}`;
+      const myRole = window.isHost ? 'host' : 'guest';
+
+      const existingChoices = data.choices || {};
+      const cardChoices = existingChoices[cardKey] || {};
+
+      cardChoices[myRole] = option;
+      existingChoices[cardKey] = cardChoices;
+
+      await updateDoc(window.roomRef, { choices: existingChoices });
+    };
+
+    window.toggleRevealSecret = async function() {
+      if (!window.roomRef) return;
+      const snap = await getDoc(window.roomRef);
+      if (!snap.exists()) return;
+      const data = snap.data();
+
+      const cardKey = `${data.currentMode}_${data.heatLevel}_${data.cardIndex}`;
+      const myName = window.isHost ? (data.hostName || 'Player 1') : (data.guestName || 'Player 2');
+
+      const existingSecrets = data.revealedSecrets || {};
+      existingSecrets[cardKey] = {
+        unlocked: true,
+        byName: myName,
+        timestamp: Date.now()
+      };
+
+      await updateDoc(window.roomRef, { revealedSecrets: existingSecrets });
+      confetti({ particleCount: 40, spread: 80, origin: { y: 0.5 } });
+    };
+
+    window.nextCard = async function() {
+      if (!window.roomRef) return;
+      const snap = await getDoc(window.roomRef);
+      if (!snap.exists()) return;
+      const data = snap.data();
+
+      await updateDoc(window.roomRef, { cardIndex: (data.cardIndex || 0) + 1 });
+    };
+
+    window.addCustomSecretPrompt = function() {
+      document.getElementById('customModal').classList.remove('hidden');
+    };
+
+    window.closeCustomModal = function() {
+      document.getElementById('customModal').classList.add('hidden');
+    };
+
+    window.submitCustomPrompt = async function() {
+      const promptText = document.getElementById('customPromptInput').value.trim();
+      const penaltyText = document.getElementById('customPenaltyInput').value.trim();
+
+      if (!promptText) return;
+
+      if (!window.roomRef) return;
+      const snap = await getDoc(window.roomRef);
+      if (!snap.exists()) return;
+      const data = snap.data();
+
+      const customPrompts = data.customPrompts || [];
+      customPrompts.push({
+        title: `🔥 Custom Secret: ${promptText}`,
+        a: "Reveal Secret 🙈",
+        penalty: penaltyText ? `Penalty: ${penaltyText}` : "Penalty: Do a spicy video dare!"
+      });
+
+      await updateDoc(window.roomRef, { customPrompts: customPrompts, cardIndex: 0 });
+
+      document.getElementById('customPromptInput').value = '';
+      document.getElementById('customPenaltyInput').value = '';
+      closeCustomModal();
+      confetti({ particleCount: 30, spread: 50 });
+    };
+
+    window.triggerPenaltyModal = function() {
+      const penaltyText = document.getElementById('penaltyDescriptionText').innerText;
+      document.getElementById('modalPenaltyText').innerText = penaltyText;
+      document.getElementById('penaltyModal').classList.remove('hidden');
+    };
+
+    window.closePenaltyModal = function() {
+      document.getElementById('penaltyModal').classList.add('hidden');
+    };
+
+    // UI Active Tab Helper Functions
+    function updateNavigationTabs(mode) {
+      document.querySelectorAll('.mode-tab-btn').forEach(btn => btn.classList.remove('active-tab'));
+      const activeBtn = document.getElementById(`nav-${mode}`);
+      if (activeBtn) activeBtn.classList.add('active-tab');
+    }
+
+    function updateHeatMeterButtons(level) {
+      document.querySelectorAll('.heat-btn').forEach(btn => {
+        btn.classList.remove('ring-2', 'ring-slate-800', 'scale-105');
+      });
